@@ -1270,39 +1270,13 @@ class edit_mask_mesh(object):
     Edit grd mask. Mask/Unsmask cell by a simple click on the cell.
     Mask modification are store in mask_change.txt for further use.
 
-    Key commands:
-        e : toggle between Editing/Viewing mode
     """
     
-    # def _on_key(self, event):
-        # if event.key == 'e':
-        #     # Toggle between edit/not options, update the plot title accordingly
-        #     self._clicking = not self._clicking
-        #     plt.title('Editing %s -- click "e" to toggle' % self._clicking)
-        #     self._canvas.draw()
-        # if event.key == 'control':
-        #     # print("CTRL key is pressed")
-        #     self.ctrl_is_held = not self.ctrl_is_held
-        # elif event.key == 'w':
-        # elif event.key == 'l':
-        # elif event.key == 'c':
-        #     print("Cell selection cleared")
-        #     self.edit_land = False
-        #     self.edit_water = False
-            
-
-    # def _on_key_release(self, event):
-        # if event.key == 'control':
-        #     # print("CTRL key is released")
-        #     self.ctrl_is_held = False
-
     def _on_click(self, event):
-        # print('In on click')
         self.edit_land = self.land_button.edit_land
         self.edit_water = self.water_button.edit_water
         self._clicking = self.edit_button.clicking
         self.edit_multi = self.multi_button.edit_multi
-        # print(self._clicking)
         x, y = event.xdata, event.ydata
         if event.button==1 and event.inaxes is not None and self._clicking == True and self.edit_multi == False:
             d = (x-self._xc)**2 + (y-self._yc)**2
@@ -1311,58 +1285,34 @@ class edit_mask_mesh(object):
             else:
                 idx = np.argwhere(d.flatten() == d.min())
 
-            # self._mask[tuple(idx[0])] = float(not self._mask[tuple(idx[0])])
             j, i = np.argwhere(d == d.min())[0]
             self.mask[j, i] = float(not self.mask[j, i])
             # open output file
             f = open('mask_change.txt','a')
-            # value = (i, j, self.mask[i, j])
-            # s = str(value)
             s = '%d %d %f' %(i, j, self.mask[j, i])
             f.write(s + '\n')
             # close file
             f.close()
-
             self._mask = self.mask.flatten()
-            
             self._pc.set_array(self._mask)
             self._pc.changed()
             self._canvas.draw()
         elif event.button == 1 and event.inaxes is not None and self._clicking is True and self.edit_multi is True:
-            # In this case the CTRL key is pressed to select a range of cells;
-            # print "Getting i_start and j_start!"
+            # In this case the multiple editing is enabledto select a range of cells;
             d = (x-self._xc)**2 + (y-self._yc)**2
             if isinstance(self.xv, np.ma.MaskedArray):
                 idx = np.argwhere(d[~self._xc.mask] == d.min())
             else:
                 idx = np.argwhere(d.flatten() == d.min())
-            # from IPython import embed; embed()
-            # self._mask[tuple(idx[0])] = float(not self._mask[tuple(idx[0])])
             self.j_start, self.i_start = np.argwhere(d == d.min())[0]
-            print("j_start, i_start = ", self.j_start, self.i_start)
-
-            # self.mask[j, i] = float(not self.mask[j, i])
-            # # open output file
-            # f = open('mask_change.txt','a')
-            # # value = (i, j, self.mask[i, j])
-            # # s = str(value)
-            # s = '%d %d %f' %(i, j, self.mask[j, i])
-            # f.write(s + '\n')
-            # # close file
-            # f.close()
-            # self._pc.set_array(self._mask)
-            # self._pc.changed()
-            # self._canvas.draw()
+            # Since it is the start point, no need to make changes on the grid yet until click release
+            # And not record anyting to mask_change.txt
 
     def _on_click_release(self, event):
-        # from IPython import embed
-        # embed()
         self.edit_land = self.land_button.edit_land
         self.edit_water = self.water_button.edit_water
         self._clicking = self.edit_button.clicking
         self.edit_multi = self.multi_button.edit_multi
-
-        # The mouse button is released with CTRL held.
         x, y = event.xdata, event.ydata
         if event.button == 1 and event.inaxes is not None and self._clicking is True and self.edit_multi == True:
             print("Entering section with for loops;")
@@ -1371,12 +1321,9 @@ class edit_mask_mesh(object):
                 idx = np.argwhere(d[~self._xc.mask] == d.min())
             else:
                 idx = np.argwhere(d.flatten() == d.min())
-            # self._mask[tuple(idx[0])] = float(not self._mask[tuple(idx[0])])
             j_end, i_end = np.argwhere(d == d.min())[0]
-            print("j_start, i_start = ", self.j_start, self.i_start)
-            print("j_end, i_end = ", j_end, i_end)
 
-            # The rectangle might be drawn in other directions
+            # The rectangle might be drawn in any directions
             # Therefore need to check which index is bigger
             if self.i_start > i_end:
                 temp = self.i_start
@@ -1392,8 +1339,6 @@ class edit_mask_mesh(object):
             f = open('mask_change.txt', 'a')
             for i in range(self.i_start, i_end+1):
                 for j in range(self.j_start, j_end+1):
-                    print("(i,j) = ", i, j)
-                    print("Mask before = ", self.mask[j, i])
                     if self.edit_water is True and self.mask[j, i] == 1:
                         self.mask[j, i] = float(not self.mask[j, i])
                     elif self.edit_land is True and self.mask[j, i] == 0:
@@ -1401,10 +1346,6 @@ class edit_mask_mesh(object):
                     elif self.edit_land is False and self.edit_water is False:
                         self.mask[j, i] = float(not self.mask[j, i])
 
-                    print("Mask after = ", self.mask[j, i])
-                    # open output file
-                    # value = (i, j, self.mask[i, j])
-                    # s = str(value)
                     s = '%d %d %f' % (i, j, self.mask[j, i])
                     f.write(s + '\n')
             # close file
@@ -1412,24 +1353,16 @@ class edit_mask_mesh(object):
             # Redraw all changes.
             self._mask = self.mask.flatten()
             self._pc.set_array(self._mask)
-            # self._pc.set_array(self.mask.flatten())
             self._pc.changed()
             self._canvas.draw()
 
     def line_select_callback(self, eclick, erelease):
-        'eclick and erelease are the press and release events'
+        'eclick and erelease are the press and release events used for rubberband selection'
         x1, y1 = eclick.xdata, eclick.ydata
         x2, y2 = erelease.xdata, erelease.ydata
-        # print("(%8.6f, %8.6f) --> (%8.6f, %8.6f)" % (x1, y1, x2, y2))
-        # print(" The button you used were: %s %s" % (eclick.button, erelease.button))
 
     def format_coord(self, x, y):
-        # col = int(x + 0.5)
-        # row = int(y + 0.5)
-        # if col >= 0 and col < numcols and row >= 0 and row < numrows:
-        #     z = X[row, col]
-        #     return 'x=%1.4f, y=%1.4f, z=%1.4f' % (x, y, z)
-        # else:
+        'Extends the status bar information from 2 decimal places to 6 decimal places.'
         return 'x=%2.6f, y=%2.6f' % (x, y)
 
 
@@ -1448,11 +1381,11 @@ class edit_mask_mesh(object):
 
             def enable(self, *args):
                 self.edit_land = not self.edit_land
-                print("Land cell selection toggled")
+                self.toolmanager.message_event("Land cell selection toggled")
 
             def disable(self, *args):
                 self.edit_land = not self.edit_land
-                print("Land cell selection toggled")
+                self.toolmanager.message_event("Land cell selection toggled")
 
         class select_water(ToolToggleBase):
             default_keymap = 'w'
@@ -1464,17 +1397,15 @@ class edit_mask_mesh(object):
                 self.gid = gid
                 # Enable water cell toggling only. Useful for mass manipulation regions
                 # like lakes. Not useful for precision cases
-                # self.edit_water = not self.edit_water
-                # self.edit_land = False
                 super().__init__(*args, **kwargs)
 
             def enable(self, *args):
                 self.edit_water = not self.edit_water
-                print("Water cell selection toggled")
+                self.toolmanager.message_event("Water cell selection toggled")
 
             def disable(self, *args):
                 self.edit_water = not self.edit_water
-                print("Water cell selection toggled")
+                self.toolmanager.message_event("Water cell selection toggled")
 
         class select_edit(ToolToggleBase):
             default_keymap = 'e'
@@ -1484,31 +1415,18 @@ class edit_mask_mesh(object):
 
             def __init__(self, *args, gid, **kwargs):
                 self.gid = gid
-                # Enable water cell toggling only. Useful for mass manipulation regions
-                # like lakes. Not useful for precision cases
-                # self.edit_water = not self.edit_water
-                # self.edit_land = False
                 super().__init__(*args, **kwargs)
 
             def enable(self, *args):
                 self.clicking = not self.clicking
                 self.toolmanager.message_event("Cell editing enabled")
                 plt.gcf().canvas.draw()
-                # from IPython import embed
-                # embed()
 
             def disable(self, *args):
                 self.clicking = not self.clicking
                 self.toolmanager.message_event("Cell editing disabled")
                 plt.gcf().canvas.draw()
 
-            # def trigger(self, sender, event, data=None):
-            #     if self._toggled:
-            #         self.disable(event)
-            #     else:
-            #         self.enable(event)
-            #     self._toggled = not self._toggled
-            #     self.toolmanager.message_event('Cell Editing Toggled')
 
         class select_multi(ToolToggleBase):
             default_keymap = 'control'
@@ -1518,31 +1436,17 @@ class edit_mask_mesh(object):
 
             def __init__(self, *args, gid, **kwargs):
                 self.gid = gid
-                # Enable water cell toggling only. Useful for mass manipulation regions
-                # like lakes. Not useful for precision cases
-                # self.edit_water = not self.edit_water
-                # self.edit_land = False
                 super().__init__(*args, **kwargs)
 
             def enable(self, *args):
                 self.edit_multi = not self.edit_multi
                 self.toolmanager.message_event("Multi Cell editing enabled")
                 plt.gcf().canvas.draw()
-                # from IPython import embed
-                # embed()
 
             def disable(self, *args):
                 self.edit_multi = not self.edit_multi
                 self.toolmanager.message_event("Multi Cell editing disabled")
                 plt.gcf().canvas.draw()
-
-            # def trigger(self, sender, event, data=None):
-            #     if self._toggled:
-            #         self.disable(event)
-            #     else:
-            #         self.enable(event)
-            #     self._toggled = not self._toggled
-            #     self.toolmanager.message_event('Cell Editing Toggled')
 
         if type(grd).__name__ == 'ROMS_Grid':
             try:
@@ -1580,6 +1484,7 @@ class edit_mask_mesh(object):
         self.edit_multi = False
         self.edit_land = False
         self.edit_water = False
+        self.edit_multi = False
 
         land_color = kwargs.pop('land_color', (0.6, 1.0, 0.6))
         sea_color = kwargs.pop('sea_color', (0.6, 0.6, 1.0))
@@ -1597,15 +1502,8 @@ class edit_mask_mesh(object):
         self._xc = 0.25*(xv[1:,1:]+xv[1:,:-1]+xv[:-1,1:]+xv[:-1,:-1])
         self._yc = 0.25*(yv[1:,1:]+yv[1:,:-1]+yv[:-1,1:]+yv[:-1,:-1])
         
-        # if isinstance(self.xv, np.ma.MaskedArray):
-        #     self._mask = mask[~self._xc.mask]
-        # else:
-        #     self._mask = mask.flatten()
-
         self._mask = mask.flatten()
-        
-        # from IPython import embed; embed()
-        
+
         self._ax = plt.gca()
         self._ax.format_coord = self.format_coord
         self._canvas = self._ax.figure.canvas
@@ -1636,18 +1534,9 @@ class edit_mask_mesh(object):
         # Fix on_key and on_click events using mpl_connect
         self._canvas.mpl_connect('button_press_event', self._on_click)
         self._canvas.mpl_connect('button_release_event', self._on_click_release)
-        # self._canvas.mpl_connect('key_press_event', self._on_key)
-        # self._canvas.mpl_connect('key_release_event', self._on_key_release)
-
-
-        # self._clicking = False
-        plt.title('Editing %s -- click "e" to toggle '% self._clicking)
-        # plt.title('Editing %s -- click "e" to toggle' % self._clicking)
-        # Print informative text below figure for keys
 
         rectprops = dict(facecolor=None, edgecolor="black", linestyle='--', alpha=0.5, fill=False)
         state_modifier_keys = dict(center=' ')
-        # drawtype is 'box' or 'line' or 'none'
         RS = RectangleSelector(self._ax, self.line_select_callback,
                                                drawtype='box', useblit=True,
                                                button=[1],  # don't use middle button and right button
@@ -1655,12 +1544,6 @@ class edit_mask_mesh(object):
                                                interactive=False,
                                                rectprops=rectprops, state_modifier_keys=state_modifier_keys)
 
-        # self.text_data = ('Press "e" on/off to click toggling water/land cells \n'
-        #                   'Press+Hold CTRL to draw a region with mouse to change a region \n'
-        #                   'Press "w" to only toggle water cells (land cells not effected) \n'
-        #                   'Press "l" to only toggle land cells  (water cells not effected) ' )
-        #
-        # plt.annotate(self.text_data, xy=(0.15, 0.1), xycoords='figure fraction')
         self._canvas.draw()
         # Requires blocking not to bypass the graphics
         plt.show(block=True)
